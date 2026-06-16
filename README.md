@@ -125,13 +125,6 @@ node build.js
 
 本项目使用 **Claude Code** 辅助开发。仓库中的 [`CLAUDE.md`](CLAUDE.md) 是项目的 AI 协作指南——包含架构说明、模块加载顺序、常见陷阱和构建命令。这是一种现代前端工程实践中越来越常见的工作流：将项目上下文结构化地提供给 AI 编码助手，提升协作效率。
 
-## 截图
-
-> *建议添加应用截图，放入 `screenshots/` 目录并在下方引用。*
-
-<!-- ![主界面](screenshots/main.png) -->
-<!-- ![深色模式](screenshots/dark.png) -->
-
 ## License
 
 MIT © [lie-monring](https://github.com/lie-monring)
