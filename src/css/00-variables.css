@@ -1,0 +1,29 @@
+/* ============================================================
+   CSS Variables & Base
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box}
+
+[data-theme="light"] {
+  --bg:#faf8f5; --surface:#fff; --primary:#e8879a; --primary-light:#fce4ec;
+  --text:#3d2c2c; --text-secondary:#8c7b7b; --bubble-user:#e8879a;
+  --bubble-ai:#f5f0eb; --border:#e8ddd5; --shadow:0 1px 3px rgba(0,0,0,.06);
+  --code-bg:#f0e8e0; --pill-bg:#f0e8e0; --pill-active:#e8879a;
+  --sidebar-bg:#f5f1ec; --sidebar-active:#fce4ec; --overlay-bg:rgba(0,0,0,.3);
+  --search-bg:#f0ebe6; --blockquote-border:#e8879a; --blockquote-bg:#fdf5f7;
+}
+[data-theme="dark"] {
+  --bg:#1a1a2e; --surface:#16213e; --primary:#d4879a; --primary-light:#3d2030;
+  --text:#e0d5c1; --text-secondary:#a09080; --bubble-user:#c06b80;
+  --bubble-ai:#1e2a3a; --border:#2a3545; --shadow:0 1px 3px rgba(0,0,0,.3);
+  --code-bg:#0f1923; --pill-bg:#1e2a3a; --pill-active:#d4879a;
+  --sidebar-bg:#111827; --sidebar-active:#1e2a3a; --overlay-bg:rgba(0,0,0,.5);
+  --search-bg:#1a2535; --blockquote-border:#d4879a; --blockquote-bg:#1a2030;
+}
+
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  background:var(--bg); color:var(--text); height:100dvh;
+  display:flex; justify-content:center; align-items:center;
+  -webkit-tap-highlight-color:transparent; transition:background .3s,color .3s;
+  overscroll-behavior:none;
+}

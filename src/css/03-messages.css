@@ -1,0 +1,80 @@
+/* ============================================================
+   Messages
+   ============================================================ */
+#messages{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.msg{max-width:82%;animation:msgFadeIn .25s ease;position:relative}
+@keyframes msgFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end}
+.msg.ai{align-self:flex-start}
+.msg .msg-header{display:flex;align-items:center;gap:6px;margin-bottom:2px;padding:0 4px}
+.msg.user .msg-header{justify-content:flex-end}
+.msg.ai .msg-header{justify-content:flex-start}
+.msg .msg-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:var(--bubble-ai)}
+.msg .msg-time{font-size:10px;color:var(--text-secondary);opacity:.7}
+.msg .msg-search-hi{background:#fff176;color:#333;border-radius:2px;padding:0 1px}
+[data-theme="dark"] .msg .msg-search-hi{background:#f9a825;color:#111}
+.msg .bubble{padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.55;word-break:break-word;position:relative}
+.msg.user .bubble{background:var(--bubble-user);color:#fff;border-bottom-right-radius:5px}
+.msg.ai .bubble{background:var(--bubble-ai);color:var(--text);border-bottom-left-radius:5px}
+.msg .bubble a{color:inherit;opacity:.85;text-decoration:underline}
+.msg .bubble code{background:var(--code-bg);padding:1px 5px;border-radius:4px;font-size:.9em}
+.msg .bubble pre{background:var(--code-bg);padding:8px 10px;border-radius:8px;overflow-x:auto;font-size:.85em;margin:4px 0;position:relative}
+.msg .bubble pre code{background:none;padding:0}
+.msg .bubble .code-copy-btn{position:absolute;top:4px;right:4px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-secondary);font-size:10px;cursor:pointer;opacity:0;transition:opacity .15s;font-family:inherit}
+.msg .bubble pre:hover .code-copy-btn{opacity:1}
+.msg .bubble .code-copy-btn:active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.msg .bubble blockquote{border-left:3px solid var(--blockquote-border);background:var(--blockquote-bg);padding:6px 10px;margin:4px 0;border-radius:0 8px 8px 0;font-size:.92em}
+.msg .bubble ul,.msg .bubble ol{padding-left:1.4em;margin:4px 0}
+.msg .bubble li{margin:2px 0}
+.msg .bubble hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+.msg .bubble table{border-collapse:collapse;margin:4px 0;font-size:.88em;width:100%}
+.msg .bubble th,.msg .bubble td{border:1px solid var(--border);padding:4px 8px;text-align:left}
+.msg .bubble th{background:var(--code-bg);font-weight:600}
+
+/* Time on messages */
+.msg .time{font-size:10px;color:var(--text-secondary);opacity:.55;margin-top:2px;padding:0 4px;user-select:none}
+.msg.user .time{text-align:right}
+.msg.ai .time{text-align:left}
+
+/* Regen button */
+.msg .btn-regen{display:none;position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:11px;cursor:pointer;color:var(--text-secondary);align-items:center;justify-content:center;z-index:2;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.msg.ai:last-child .btn-regen{display:flex}
+.msg .btn-regen:active{background:var(--bubble-ai)}
+
+/* Action buttons on messages */
+.msg-actions{display:none;gap:4px;margin-top:3px;padding:0 4px}
+.msg-actions.show{display:flex}
+.msg.user .msg-actions{justify-content:flex-end}
+.msg.ai .msg-actions{justify-content:flex-start}
+.msg-actions button{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer}
+.msg-actions button:active{background:var(--bubble-ai)}
+
+/* Edit mode */
+.msg .edit-area{display:none;flex-direction:column;gap:4px}
+.msg .edit-area textarea{width:100%;padding:8px 12px;border-radius:14px;border:1px solid var(--primary);font-size:14px;font-family:inherit;resize:none;outline:none;background:var(--surface);color:var(--text)}
+.msg .edit-area .btns{display:flex;gap:4px;justify-content:flex-end}
+.msg .edit-area .btns button{font-size:12px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text)}
+.msg .edit-area .btns button.save{background:var(--primary);color:#fff;border:none}
+
+/* Typing indicator */
+#typing{display:none;align-self:flex-start;padding:7px 13px;background:var(--bubble-ai);border-radius:18px;border-bottom-left-radius:5px;margin-left:28px}
+#typing.show{display:block}
+#typing .typing-inner{display:flex;align-items:center;gap:6px}
+#typing .typing-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--bubble-ai);position:absolute;left:-28px;top:0}
+#typing .dots{display:flex;gap:3px}
+#typing .dots span{width:7px;height:7px;border-radius:50%;background:var(--text-secondary);opacity:.4;animation:typePulse 1.4s ease-in-out infinite}
+#typing .dots span:nth-child(2){animation-delay:.2s}
+#typing .dots span:nth-child(3){animation-delay:.4s}
+@keyframes typePulse{0%,100%{opacity:.3;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+
+/* Scene transition overlay */
+#scene-transition{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:150;background:var(--overlay-bg);justify-content:center;align-items:center;pointer-events:none}
+#scene-transition.show{display:flex;animation:sceneFlash .5s ease}
+@keyframes sceneFlash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+#scene-transition .scene-label{background:var(--surface);padding:10px 20px;border-radius:14px;font-size:14px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+
+/* Empty state */
+#empty-hint{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:40px 20px;color:var(--text-secondary);text-align:center;flex:1}
+#empty-hint .icon{font-size:44px}
+#empty-hint .title{font-size:16px;font-weight:600;color:var(--text)}
+#empty-hint .sub{font-size:13px}

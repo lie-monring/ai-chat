@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Yuki - 聊天</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiWXVraSBDaGF0Iiwic2hvcnRfbmFtZSI6Ill1a2kiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJ0aGVtZV9jb2xvciI6IiNlODg3OWEiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZhZjhmNSJ9">
+<meta name="theme-color" content="#e8879a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+<!-- @include css/00-variables.css -->
+<!-- @include css/01-layout.css -->
+<!-- @include css/02-components.css -->
+<!-- @include css/03-messages.css -->
+<!-- @include css/04-responsive.css -->
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span class="title">角色列表</span>
+      <span class="count" id="char-count">0/10</span>
+    </div>
+    <div id="sidebar-list"></div>
+    <div id="sidebar-footer">
+      <button id="btn-add-char">＋ 添加角色</button>
+      <button id="btn-import-char" style="margin-top:4px;width:100%;padding:6px;border:1px dashed var(--border);border-radius:10px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:inherit">📥 导入角色卡</button>
+    </div>
+  </div>
+
+  <div id="chat-area">
+    <div id="header">
+      <button id="btn-sidebar-toggle">☰</button>
+      <div class="avatar" id="header-avatar">🌸</div>
+      <div class="info">
+        <div class="name"><span id="header-name">Yuki</span><span id="same-person-badge" class="same-person-badge" style="display:none" title="点击切换状态">🔄</span></div>
+        <div class="status" id="status-text">在线</div>
+      </div>
+      <div class="actions">
+        <button id="btn-search" title="搜索消息">🔍</button>
+        <button id="btn-diary" title="日记本">📔</button>
+        <button id="btn-yuki-call" title="让Ta主动找你">💬</button>
+        <button id="btn-theme" title="深色模式">🌙</button>
+        <button id="btn-settings" title="设置">⚙</button>
+      </div>
+    </div>
+
+    <div id="search-bar">
+      <input type="text" id="search-input" placeholder="搜索聊天记录…">
+      <span class="search-count" id="search-count"></span>
+      <button id="search-prev" title="上一个">↑</button>
+      <button id="search-next" title="下一个">↓</button>
+      <button id="search-close" title="关闭">✕</button>
+    </div>
+
+    <div id="scene-bar"></div>
+
+    <div id="settings-panel">
+      <label>DeepSeek API Key</label>
+      <input type="password" id="api-key-input" placeholder="sk-...">
+      <div class="hint">Key 仅保存在本设备浏览器中</div>
+      <div class="sep"></div>
+      <label>AI 怎么称呼你</label>
+      <input type="text" id="user-title-input" placeholder="哥哥" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:var(--surface);color:var(--text)">
+      <div class="hint">替换所有系统提示中角色的默认称呼</div>
+      <div class="sep"></div>
+      <div class="toggle-row">
+        <span>Temperature: <strong id="temp-display">0.8</strong></span>
+        <input type="range" id="temperature-slider" min="0.1" max="1.5" step="0.1" value="0.8" style="width:120px">
+      </div>
+      <div class="toggle-row">
+        <span>最大回复长度: <strong id="tokens-display">600</strong> tokens</span>
+        <input type="range" id="max-tokens-slider" min="100" max="2000" step="100" value="600" style="width:120px">
+      </div>
+      <div class="toggle-row">
+        <span>对话记忆: <strong id="history-display">40</strong> 条</span>
+        <input type="range" id="max-history-slider" min="10" max="200" step="10" value="40" style="width:120px">
+      </div>
+      <div class="sep"></div>
+      <div class="toggle-row">
+        <span>Enter 键直接发送（关=换行）</span>
+        <input type="checkbox" id="enter-send-toggle" checked>
+      </div>
+      <div class="sep"></div>
+      <label>数据管理</label>
+      <div class="hint" id="storage-info">已使用: 计算中…</div>
+      <div class="storage-bar"><div class="fill" id="storage-fill" style="width:0%"></div></div>
+      <div class="row">
+        <button id="btn-save-key">保存</button>
+        <button id="btn-clear-chat" class="danger">清空当前对话</button>
+      </div>
+      <div class="row">
+        <button id="btn-export-all">导出全部备份</button>
+        <button id="btn-import-all">导入备份</button>
+      </div>
+    </div>
+
+    <div id="key-banner">请先 <a id="key-banner-link">设置 DeepSeek API Key</a> 才能聊天哦～</div>
+    <div id="error-banner"><span class="err-text" id="error-text"></span><button id="error-dismiss">✕</button></div>
+
+    <div id="messages"></div>
+    <button id="btn-scroll-bottom" title="回到底部">↓</button>
+    <div id="typing"><div class="typing-inner"><div class="dots"><span></span><span></span><span></span></div></div></div>
+
+    <div id="token-bar">
+      <span class="token-info" id="token-info"></span>
+      <button class="stop-btn" id="btn-stop">■ 停止</button>
+    </div>
+
+    <div id="input-area">
+      <textarea id="user-input" rows="1" placeholder="说点什么吧…"></textarea>
+      <span class="input-meta" id="input-meta"></span>
+      <span id="btn-send" tabindex="-1" role="button">➤</span>
+    </div>
+  </div>
+</div>
+
+<div id="drawer-backdrop"></div>
+<div id="ctx-menu"></div>
+<div id="scene-transition"><div class="scene-label" id="scene-transition-label"></div></div>
+
+<div id="diary-overlay">
+  <div id="diary-header">
+    <span class="title" id="diary-title">📔 日记本</span>
+    <button id="btn-diary-close">✕</button>
+  </div>
+  <div id="diary-body"></div>
+  <div id="diary-footer">
+    <button id="btn-diary-write">✏️ 写一篇新日记</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-char-edit">
+  <div class="modal-box">
+    <h3 id="modal-char-title">添加角色</h3>
+    <label>名字</label>
+    <input type="text" id="char-edit-name" placeholder="角色名字">
+    <label>头像 Emoji</label>
+    <input type="text" id="char-edit-emoji" placeholder="🌸" maxlength="2" style="width:60px;text-align:center;font-size:24px">
+    <div class="emoji-grid" id="emoji-grid"></div>
+    <label>简短描述（显示在侧栏）</label>
+    <input type="text" id="char-edit-desc" placeholder="哥哥的远房表妹">
+    <label>System Prompt（人设）</label>
+    <textarea id="char-edit-prompt" placeholder="你是...&#10;【身份】...&#10;【性格】...&#10;【说话风格】..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btn-char-edit-cancel">取消</button>
+      <button class="btn-primary" id="btn-char-edit-save">保存</button>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button style="border:none;background:none;color:var(--primary);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit" id="btn-import-from-modal">📥 从角色卡文件导入…</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-import-confirm">
+  <div class="modal-box">
+    <h3>确认导入角色</h3>
+    <div id="import-preview"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btn-import-cancel">取消</button>
+      <button class="btn-primary" id="btn-import-confirm">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-delete-confirm">
+  <div class="modal-box">
+    <h3>删除角色</h3>
+    <p id="delete-msg" style="font-size:14px;color:var(--text-secondary)"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btn-delete-cancel">取消</button>
+      <button class="btn-danger" id="btn-delete-confirm">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<input type="file" id="file-import" accept=".json,.png" style="display:none">
+<input type="file" id="file-import-backup" accept=".json" style="display:none">
+
+<script>
+<!-- @include js/00-constants.js -->
+<!-- @include js/01-utils.js -->
+<!-- @include js/02-markdown.js -->
+<!-- @include js/03-storage.js -->
+<!-- @include js/04-dom-refs.js -->
+<!-- @include js/05-state.js -->
+<!-- @include js/06-sidebar.js -->
+<!-- @include js/07-characters.js -->
+<!-- @include js/08-scenes.js -->
+<!-- @include js/09-search.js -->
+<!-- @include js/10-diary.js -->
+<!-- @include js/11-theme.js -->
+<!-- @include js/12-messages.js -->
+<!-- @include js/13-api.js -->
+<!-- @include js/14-ui.js -->
+<!-- @include js/15-init.js -->
+init();
+</script>
+</body>
+</html>

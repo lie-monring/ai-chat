@@ -1,0 +1,13 @@
+/* ============================================================
+   Responsive — Mobile
+   ============================================================ */
+@media (max-width: 767px) {
+  #app { max-width:100%; flex-direction:column }
+  #sidebar { display:none; position:fixed; top:0; left:0; width:260px; height:100%; z-index:250; border-right:1px solid var(--border); box-shadow:4px 0 20px rgba(0,0,0,.15); transform:translateX(-100%) }
+  #sidebar.open { display:flex; transform:translateX(0) }
+  #btn-sidebar-toggle { display:flex }
+  #header .avatar { width:30px; height:30px; font-size:14px }
+  #header .name { font-size:14px }
+  .char-item { padding:10px 14px }
+  .msg { max-width:90% }
+}

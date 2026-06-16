@@ -1,0 +1,10 @@
+node_modules/
+backups/
+previous/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
+.vscode/
+.idea/
