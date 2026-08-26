@@ -5,21 +5,24 @@
 > 个人娱乐项目，亦是前端工程能力的实践作品。
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/lie-monring/ai-chat)
-![GitHub License](https://img.shields.io/gitlab/license/lie-monring/ai-chat)
+![GitHub License](https://img.shields.io/github/license/lie-monring/ai-chat)
 ![Built with](https://img.shields.io/badge/built%20with-vanilla%20JS-%23e8879a)
 
 ## 功能特性
 
-- **多角色系统** — 预设 3 组动漫风格 AI 角色（澪、拉姆、蕾姆×拉姆），支持自定义创建、编辑、删除、复制。基于 System Prompt 驱动角色人格
+- **多角色系统** — 预设 7 位动漫风格 AI 角色（澪、拉姆、蕾姆、Yuki、小Yuki、蕾姆和拉姆、火花），支持自定义创建、编辑、删除、复制。基于 System Prompt 驱动角色人格
 - **流式对话** — SSE（Server-Sent Events）实时流式输出，支持中途停止生成，含超时保护（30s）与全局超时（35s）
-- **场景切换** — 每个角色 6 种预设场景（日常、深夜、洗澡后、车里、学校、做饭、打游戏），一键切换对话氛围，动态注入场景上下文
-- **日记本** — 调用 AI 根据最近对话自动生成角色视角的私人日记
-- **明暗主题** — CSS 自定义属性驱动的双主题系统，15 个语义化变量覆盖全部组件
+- **场景切换** — 每个角色 7 种预设场景（日常、深夜聊天、刚洗完澡、车里独处、学校见面、一起做饭、一起打游戏），一键切换对话氛围，动态注入场景上下文
+- **对话记忆摘要** — 更早的对话自动折叠成摘要，只保留最近原文，省 token 又保留长期记忆
+- **角色外观定制** — 每个角色独立的主题色、背景色、背景图片、头像，预设角色自带专属头像/背景
+- **明暗主题** — CSS 自定义属性驱动的双主题系统，19 个语义化变量覆盖全部组件
 - **Markdown 渲染** — 消息支持 Markdown 格式（代码高亮、引用块、列表等），代码块一键复制
 - **消息搜索** — 在当前对话中正则搜索，支持上下导航
+- **主动搭话** — 一键让角色主动找你，延续自己的动作与台词
 - **数据管理** — JSON / PNG 角色卡（Character Card v2/v3 spec）导入导出，全量数据备份与恢复
 - **localStorage 持久化** — 对话记录、角色配置、用户设置全本地存储，含 Quota 检测和 v1→v2 Schema 迁移
 - **移动端适配** — 响应式布局，手机端侧栏抽屉式交互，`100dvh` 视口适配
+- **快捷键** — Ctrl+数字切换角色、Ctrl+F 快速搜索
 
 ## 快速开始
 
@@ -37,7 +40,7 @@
 | UI 样式 | CSS Custom Properties 主题系统，无 CSS 框架 |
 | AI 接口 | DeepSeek API（`deepseek-chat`），SSE 流式调用 |
 | 持久化 | `localStorage`，结构化键值存储，含 Quota 边界处理 |
-| 构建 | Node.js 19 行拼接脚本，`@include` 标记驱动 |
+| 构建 | Node.js 拼接脚本（`build.js`），`@include` 标记驱动 |
 | AI 辅助 | Claude Code — AI 辅助开发，`CLAUDE.md` 作为项目 AI 协作指南 |
 
 ## 架构
@@ -56,6 +59,7 @@ src/
 │   ├── 03-messages.css     # 消息气泡、Markdown 排版、打字指示器
 │   └── 04-responsive.css   # 移动端 @media 断点
 └── js/
+    ├── 00-assets.js        # 预设头像/背景图资源（base64）、CHARACTER_ASSETS
     ├── 00-constants.js     # API 地址、存储键、角色 Prompt、预设角色
     ├── 01-utils.js         # deepClone、formatTime、estimateTokens、showToast
     ├── 02-markdown.js      # Markdown → HTML 渲染、代码块复制
@@ -66,10 +70,9 @@ src/
     ├── 07-characters.js    # 角色 CRUD、导入导出、Character Card 解析
     ├── 08-scenes.js        # 场景 Pill 切换栏
     ├── 09-search.js        # 消息搜索、结果导航
-    ├── 10-diary.js         # AI 日记生成与渲染
-    ├── 11-theme.js         # 明暗主题切换
+    ├── 11-theme.js         # 明暗主题、角色配色/背景/头像
     ├── 12-messages.js      # 消息渲染、编辑、重试、重新生成
-    ├── 13-api.js           # SSE 流式请求、AbortController、rAF 节流
+    ├── 13-api.js           # SSE 流式请求、对话摘要、主动搭话、rAF 节流
     ├── 14-ui.js            # UI 状态聚合更新、设置保存
     └── 15-init.js          # 启动初始化、全部事件绑定
 ```
@@ -77,8 +80,8 @@ src/
 ### JS 模块加载顺序
 
 ```
-constants → utils → markdown → storage → dom-refs → state
-  → sidebar → characters → scenes → search → diary
+assets → constants → utils → markdown → storage → dom-refs → state
+  → sidebar → characters → scenes → search
   → theme → messages → api → ui → init
 ```
 
@@ -103,11 +106,15 @@ constants → utils → markdown → storage → dom-refs → state
 ## 构建
 
 ```bash
+# 仅当更换预设角色头像/背景图时需要（需先 npm install 安装 sharp）
+node tools/compress-images.js
+
+# 拼接源码为单文件
 node build.js
-# 输出: yuki-chat.html (xxx KB)
+# 输出: yuki-chat.html
 ```
 
-构建脚本读取 `src/index.html`，将所有 `<!-- @include path/to/file -->` 标记替换为对应文件内容，输出完整的单文件 HTML。
+构建脚本读取 `src/index.html`，将所有 `<!-- @include path/to/file -->` 标记替换为对应文件内容，输出完整的单文件 HTML。`src/js/00-assets.js`（预设头像/背景图 base64 资源）由 `tools/compress-images.js` 从 `images-src/` 自动生成。
 
 ## 技术亮点
 
@@ -116,8 +123,9 @@ node build.js
 - **SSE 流式处理** — 手动解析 `ReadableStream`，逐行拆分 SSE `data:` 帧，处理跨 chunk 断行。双超时保护：请求级 30s `AbortController` + 全局 35s `setTimeout` 兜底
 - **rAF 节流渲染** — 流式输出期间，DOM 更新经 `requestAnimationFrame` 节流，避免每次 token 到达都触发强制回流（layout thrashing）
 - **Schema 版本迁移** — `migrateV1toV2()` 将旧版扁平键值结构无损迁移到新的角色-消息分层模型，对用户透明
+- **对话摘要省 token** — 超过最近 12 条后，更早的对话经独立 API 调用压缩成 150 字摘要注入上下文，长期记忆与 token 开销兼得
 - **Character Card PNG 解析** — 支持从 PNG 文件的 `tEXt` 辅助 chunk 中读取 v2/v3 格式的角色卡 JSON 数据
-- **CSS 变量主题系统** — 15 个语义化 CSS 自定义属性（`--bg`、`--primary`、`--bubble-ai` 等），切换 `[data-theme]` 属性即可全局换肤，无需 JS 操作任何元素的样式
+- **CSS 变量主题系统** — 19 个语义化 CSS 自定义属性（`--bg`、`--primary`、`--bubble-ai` 等），切换 `[data-theme]` 属性即可全局换肤，无需 JS 操作任何元素的样式
 - **localStorage 安全边界** — 所有 `localStorage` 读写包裹 `try-catch`，捕获 `QuotaExceededError` 并提示用户。存储空间可视化（用量条 + 百分比）
 - **零依赖** — 整个应用不依赖任何 npm 包、CDN、框架。约 2000 行源代码，可读性强
 
