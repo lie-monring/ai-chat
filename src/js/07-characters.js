@@ -4,12 +4,12 @@
 function switchCharacter(charId) {
   if (charId === config.activeCharId) return;
   if (isLoading && abortController) { abortController.abort(); abortController = null; setLoading(false); }
-  saveCurrentMessages(); saveCurrentDiary();
+  saveCurrentMessages();
   const cur = activeCharacter();
   if (cur) { const idx = characters.findIndex(c => c.id === cur.id); if (idx >= 0) characters[idx].messageCount = activeMessages.length; }
   config.activeCharId = charId; saveConfig(config);
-  activeMessages = loadMessages(charId); activeDiary = loadDiary(charId);
-  highlightActiveChar(); renderMessages(); renderSceneBar(); updateUI(); closeActionMenus();
+  activeMessages = loadMessages(charId);
+  highlightActiveChar(); renderMessages(); renderSceneBar(); updateUI(); syncColorSettings(); closeActionMenus();
   closeSearch();
   const nc = activeCharacter();
   if (nc) showToast('已切换到 ' + nc.emoji + ' ' + nc.name);
@@ -47,8 +47,8 @@ function saveCharEdit() {
   const description = $charEditDesc.value.trim();
   const prompt = $charEditPrompt.value.trim(); if (!prompt) { showToast('请输入角色人设 prompt'); return; }
   if (editingCharId === 'new') {
-    const c = { id:generateId(), name, emoji, avatar:null, prompt, description, cardVersion:null, cardData:null, firstMessage:'', mesExample:'', postHistoryInstructions:'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
-    characters.push(c); saveCharacters(characters); saveMessages(c.id, []); saveDiary(c.id, []);
+    const c = { id:generateId(), name, emoji, avatar:null, prompt, description, themeColor:THEME_COLOR_PALETTE[characters.length % THEME_COLOR_PALETTE.length], bgColor:null, bgImage:null, cardVersion:null, cardData:null, firstMessage:'', mesExample:'', postHistoryInstructions:'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
+    characters.push(c); saveCharacters(characters); saveMessages(c.id, []);
     renderSidebar(); switchCharacter(c.id); showToast('角色「' + name + '」已添加');
   } else {
     const idx = characters.findIndex(ch => ch.id === editingCharId); if (idx < 0) return;
@@ -62,7 +62,7 @@ function duplicateCharacter(charId) {
   if (!src || characters.length >= MAX_CHARACTERS) { showToast('最多支持 ' + MAX_CHARACTERS + ' 个角色'); return; }
   const dup = deepClone(src);
   dup.id = generateId(); dup.name = src.name + ' (副本)'; dup.createdAt = new Date().toISOString(); dup.updatedAt = new Date().toISOString(); dup.messageCount = 0;
-  characters.push(dup); saveCharacters(characters); saveMessages(dup.id, []); saveDiary(dup.id, []);
+  characters.push(dup); saveCharacters(characters); saveMessages(dup.id, []);
   renderSidebar(); switchCharacter(dup.id); showToast('已复制「' + src.name + '」');
 }
 
@@ -82,8 +82,8 @@ function confirmDelete() {
   characters.splice(idx, 1); deleteCharData(charId); saveCharacters(characters);
   if (config.activeCharId === charId) {
     config.activeCharId = characters[0]?.id || ''; saveConfig(config);
-    if (characters[0]) { activeMessages = loadMessages(characters[0].id); activeDiary = loadDiary(characters[0].id); }
-    else { activeMessages = []; activeDiary = []; }
+    if (characters[0]) { activeMessages = loadMessages(characters[0].id); }
+    else { activeMessages = []; }
   }
   renderSidebar(); renderMessages(); renderSceneBar(); updateUI(); showToast('已删除「' + name + '」');
 }
@@ -131,7 +131,7 @@ function mapCardToCharacter(card) {
   if (data.system_prompt) pp.push(data.system_prompt);
   else { if(data.name)pp.push('【角色名】'+data.name); if(data.description)pp.push('【描述】'+data.description); if(data.personality)pp.push('【性格】'+data.personality); if(data.scenario)pp.push('【背景】'+data.scenario); }
   if (data.post_history_instructions) pp.push(data.post_history_instructions);
-  return { id:generateId(), name:data.name||'未命名角色', emoji:EMOJI_PALETTE[characters.length%EMOJI_PALETTE.length]||'💬', avatar:data.avatar||null, prompt:pp.join('\n\n')||JSON.stringify(card), description:(typeof data.description==='string'?data.description:(data.name||'')), tags:data.tags||[], cardVersion:version, cardData:card, firstMessage:data.first_mes||'', mesExample:data.mes_example||'', postHistoryInstructions:data.post_history_instructions||'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
+  return { id:generateId(), name:data.name||'未命名角色', emoji:EMOJI_PALETTE[characters.length%EMOJI_PALETTE.length]||'💬', avatar:data.avatar||null, themeColor:THEME_COLOR_PALETTE[characters.length%THEME_COLOR_PALETTE.length]||null, bgColor:null, bgImage:null, prompt:pp.join('\n\n')||JSON.stringify(card), description:(typeof data.description==='string'?data.description:(data.name||'')), tags:data.tags||[], cardVersion:version, cardData:card, firstMessage:data.first_mes||'', mesExample:data.mes_example||'', postHistoryInstructions:data.post_history_instructions||'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
 }
 function showImportConfirm(c) {
   if (characters.length >= MAX_CHARACTERS) { showToast('最多支持 ' + MAX_CHARACTERS + ' 个角色'); return; }
@@ -141,7 +141,7 @@ function showImportConfirm(c) {
 }
 function confirmImport() {
   if (!pendingImport) return;
-  characters.push(pendingImport); saveCharacters(characters); saveMessages(pendingImport.id,[]); saveDiary(pendingImport.id,[]);
+  characters.push(pendingImport); saveCharacters(characters); saveMessages(pendingImport.id,[]);
   $modalImportConfirm.classList.remove('show'); renderSidebar(); switchCharacter(pendingImport.id); showToast('已导入「'+pendingImport.name+'」'); pendingImport=null;
 }
 function exportCharacter(charId) {
@@ -152,9 +152,9 @@ function exportCharacter(charId) {
   downloadJson(d, (c.name||'character')+'.json'); showToast('已导出「'+c.name+'」');
 }
 function exportAllData() {
-  const allM={}, allD={};
-  characters.forEach(c => { allM[c.id]=loadMessages(c.id); allD[c.id]=loadDiary(c.id); });
-  downloadJson({ version:CONFIG_VERSION, exportedAt:new Date().toISOString(), config:{...config,apiKey:'***'}, characters, messages:allM, diaries:allD }, 'yuki_backup_'+new Date().toISOString().slice(0,10)+'.json');
+  const allM={};
+  characters.forEach(c => { allM[c.id]=loadMessages(c.id); });
+  downloadJson({ version:CONFIG_VERSION, exportedAt:new Date().toISOString(), config:{...config,apiKey:'***'}, characters, messages:allM }, 'yuki_backup_'+new Date().toISOString().slice(0,10)+'.json');
   showToast('全部数据已导出');
 }
 function handleBackupImport(e) {
@@ -163,15 +163,14 @@ function handleBackupImport(e) {
   reader.onload = () => {
     try {
       const b = JSON.parse(reader.result);
-      if (!b.characters||!b.messages||!b.diaries) throw new Error('备份文件格式不正确');
+      if (!b.characters||!b.messages) throw new Error('备份文件格式不正确');
       if (!confirm('确定要导入此备份吗？\n\n当前所有数据将被覆盖！\n导出时间：'+(b.exportedAt||'未知')+'\n角色数量：'+b.characters.length+'\n注意：API Key 不会被导入，需重新设置。')) return;
       characters=b.characters; saveCharacters(characters);
       for(const[id,msgs] of Object.entries(b.messages)) saveMessages(id,msgs);
-      for(const[id,entries] of Object.entries(b.diaries)) saveDiary(id,entries);
       config.activeCharId=b.config?.activeCharId||characters[0]?.id||'';
       if(!config.apiKey) config.apiKey=localStorage.getItem(OLD_KEY_KEY)||'';
       saveConfig(config);
-      const ac=activeCharacter(); activeMessages=ac?loadMessages(ac.id):[]; activeDiary=ac?loadDiary(ac.id):[];
+      const ac=activeCharacter(); activeMessages=ac?loadMessages(ac.id):[];
       renderSidebar(); renderMessages(); renderSceneBar(); updateUI(); updateCharCount(); updateStorageInfo();
       showToast('备份已恢复 ✅');
     } catch(err) { showToast('备份导入失败: '+err.message); }

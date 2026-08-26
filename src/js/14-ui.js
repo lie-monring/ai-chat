@@ -21,12 +21,16 @@ function updateUI() {
   if (!hasKey) $statusText.textContent = '未连接';
   else if (isLoading) $statusText.textContent = '正在输入…';
   else $statusText.textContent = '在线';
-  if (ac) { $headerAvatar.textContent = ac.emoji || '💬'; $headerName.textContent = ac.name; }
+  if (ac) {
+    $headerAvatar.innerHTML = ac.avatar ? '<img src="' + escapeHtml(ac.avatar) + '" alt="">' : escapeHtml(ac.emoji || '💬');
+    $headerName.textContent = ac.name;
+  }
   if (ac && ac.samePersonGroup) {
     const sib = characters.find(c => c.samePersonGroup === ac.samePersonGroup && c.id !== ac.id);
     if (sib) { $samePersonBadge.style.display = 'inline'; $samePersonBadge.title = '切换到 ' + (sib.stateDescription || sib.name); }
     else $samePersonBadge.style.display = 'none';
   } else $samePersonBadge.style.display = 'none';
   $input.placeholder = ac ? '和 ' + ac.name + ' 说点什么吧…' : '说点什么吧…';
+  applyThemeColor();
   updateTokenEstimate();
 }

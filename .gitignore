@@ -1,6 +1,7 @@
 node_modules/
 backups/
 previous/
+images-src/
 .DS_Store
 Thumbs.db
 desktop.ini

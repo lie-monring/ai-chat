@@ -4,7 +4,6 @@
 let config = {};
 let characters = [];
 let activeMessages = [];
-let activeDiary = [];
 let isLoading = false;
 let enterSend = true;
 let activeMsgIdx = -1;
@@ -25,5 +24,6 @@ function activeSystemPrompt() {
   const defTitle = c.userTitle || '哥哥';
   const wantTitle = config.userTitle || defTitle;
   if (wantTitle !== defTitle) prompt = prompt.replace(new RegExp(defTitle, 'g'), wantTitle);
+  prompt += '\n\n' + GLOBAL_WRITING_RULE;
   return prompt;
 }

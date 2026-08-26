@@ -16,7 +16,6 @@ const $headerName = document.getElementById('header-name');
 const $samePersonBadge = document.getElementById('same-person-badge');
 const $statusText = document.getElementById('status-text');
 const $btnSearch = document.getElementById('btn-search');
-const $btnDiary = document.getElementById('btn-diary');
 const $btnYukiCall = document.getElementById('btn-yuki-call');
 const $btnTheme = document.getElementById('btn-theme');
 const $btnSettings = document.getElementById('btn-settings');
@@ -48,6 +47,16 @@ const $tokensDisplay = document.getElementById('tokens-display');
 const $maxHistorySlider = document.getElementById('max-history-slider');
 const $historyDisplay = document.getElementById('history-display');
 const $userTitleInput = document.getElementById('user-title-input');
+const $setThemeColor = document.getElementById('set-theme-color');
+const $setBgColor = document.getElementById('set-bg-color');
+const $setBgCustom = document.getElementById('set-bg-custom');
+const $btnBgImagePick = document.getElementById('btn-bg-image-pick');
+const $btnBgImageClear = document.getElementById('btn-bg-image-clear');
+const $fileBgImage = document.getElementById('file-bg-image');
+const $btnAvatarImagePick = document.getElementById('btn-avatar-image-pick');
+const $btnAvatarImageClear = document.getElementById('btn-avatar-image-clear');
+const $fileAvatarImage = document.getElementById('file-avatar-image');
+const $colorCharName = document.getElementById('color-char-name');
 const $btnStop = document.getElementById('btn-stop');
 const $tokenInfo = document.getElementById('token-info');
 const $toast = document.getElementById('toast');
@@ -63,13 +72,6 @@ const $searchClose = document.getElementById('search-close');
 // Scene transition
 const $sceneTransition = document.getElementById('scene-transition');
 const $sceneTransitionLabel = document.getElementById('scene-transition-label');
-
-// Diary
-const $diaryOverlay = document.getElementById('diary-overlay');
-const $diaryTitle = document.getElementById('diary-title');
-const $diaryBody = document.getElementById('diary-body');
-const $btnDiaryClose = document.getElementById('btn-diary-close');
-const $btnDiaryWrite = document.getElementById('btn-diary-write');
 
 // Modals
 const $modalCharEdit = document.getElementById('modal-char-edit');

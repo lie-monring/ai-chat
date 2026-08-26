@@ -24,8 +24,9 @@ function renderMessage(m, i) {
   div.setAttribute('data-idx', i);
 
   const avatarEmoji = isUser ? '👤' : (ac ? ac.emoji : '💬');
+  const avatarInner = (!isUser && ac && ac.avatar) ? '<img src="' + escapeHtml(ac.avatar) + '" alt="">' : avatarEmoji;
   const timeStr = formatTime(m.ts);
-  const header = '<div class="msg-header"><span class="msg-avatar">' + avatarEmoji + '</span><span class="msg-time">' + timeStr + '</span></div>';
+  const header = '<div class="msg-header"><span class="msg-avatar">' + avatarInner + '</span><span class="msg-time">' + timeStr + '</span></div>';
   const bubble = '<div class="bubble"><div class="bubble-inner">' + renderMarkdown(m.content, currentSearchTerm) + '</div></div>';
 
   div.innerHTML = (isUser ? '' : header) + bubble + (isUser ? header.replace('msg-header', 'msg-header user-header') : '');
@@ -54,13 +55,11 @@ function toggleActions(msgEl, idx) {
     c.onclick = e => { e.stopPropagation(); copyMessage(idx); };
     actions.appendChild(b); actions.appendChild(c);
   } else {
-    const b = document.createElement('button'); b.textContent = '重试';
-    b.onclick = e => { e.stopPropagation(); retryMessage(idx); };
     const r = document.createElement('button'); r.textContent = '重新生成';
     r.onclick = e => { e.stopPropagation(); regenerateMessage(idx); };
     const c = document.createElement('button'); c.textContent = '复制';
     c.onclick = e => { e.stopPropagation(); copyMessage(idx); };
-    actions.appendChild(b); actions.appendChild(r); actions.appendChild(c);
+    actions.appendChild(r); actions.appendChild(c);
   }
   msgEl.appendChild(actions);
 }
@@ -105,11 +104,6 @@ function exitEdit(msgEl) {
   msgEl.classList.remove('editing');
   const ea = msgEl.querySelector('.edit-area'); if (ea) ea.remove();
   const b = msgEl.querySelector('.bubble'); if (b) b.style.display = '';
-}
-function retryMessage(idx) {
-  if (activeMessages[idx]?.role !== 'assistant') return;
-  activeMessages.splice(idx, 1);
-  saveCurrentMessages(); renderMessages(); closeActionMenus(); generateResponse();
 }
 function regenerateMessage(idx) {
   if (activeMessages[idx]?.role !== 'assistant') return;

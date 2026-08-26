@@ -45,6 +45,43 @@ async function sendMessage(e) {
   await generateResponse();
 }
 
+// ============================================================
+// SUMMARY (token-saving conversation memory)
+// ============================================================
+function loadSummary(charId) { return storageGet(STORAGE_KEY_SUMMARY_PFX + charId, { count: 0, text: '' }); }
+function saveSummary(charId, s) { storageSet(STORAGE_KEY_SUMMARY_PFX + charId, s); }
+
+async function runSummary(prevText, msgs) {
+  const apiKey = config.apiKey;
+  if (!apiKey || !msgs.length) return '';
+  const body = (prevText ? '【之前的摘要】\n' + prevText + '\n\n【新增对话】\n' : '【对话】\n') +
+    msgs.map(m => (m.role === 'user' ? '玩家' : '角色') + '：' + (m.content || '')).join('\n');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const resp = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: 'system', content: '你是对话摘要助手。把下面的角色扮演对话压缩成一段第三人称的简短摘要（150字以内），保留关键情节、情绪变化、人物关系和重要事件，去掉寒暄和重复。直接输出摘要本身，不要加任何说明或标题。' },
+          { role: 'user', content: body }
+        ],
+        stream: false, temperature: 0.3, max_tokens: 300
+      }),
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return '';
+    const data = await resp.json();
+    return (data.choices?.[0]?.message?.content || '').trim();
+  } catch {
+    clearTimeout(timer);
+    return '';
+  }
+}
+
 async function generateResponse(systemSuffix) {
   const apiKey = config.apiKey;
   if (!apiKey) return;
@@ -58,12 +95,37 @@ async function generateResponse(systemSuffix) {
   let sys = activeSystemPrompt();
   if (systemSuffix) sys += '\n\n' + systemSuffix;
 
-  const apiMessages = [{ role:'system', content:sys }];
-  const history = activeMessages.slice(-MAX_HISTORY);
-  for (const m of history) apiMessages.push({ role:m.role, content:m.content });
-
   const ac = activeCharacter();
-  activeMessages.push({ role:'assistant', content:'', characterId:ac?ac.id:'', ts:Date.now() });
+  const acId = ac ? ac.id : '';
+
+  // 对话记忆省 token：更早的对话折叠成摘要，只带最近几条原文
+  const apiMessages = [{ role:'system', content:sys }];
+  const total = activeMessages.length;
+  const recentN = Math.min(SUMMARY_RECENT, total);
+  const recent = activeMessages.slice(total - recentN);
+  const olderCount = total - recentN;
+  let summaryText = '';
+  let rawPrefix = [];
+  if (olderCount > 0) {
+    let st = loadSummary(acId);
+    if (st.count > olderCount) { st = { count: 0, text: '' }; saveSummary(acId, st); }
+    rawPrefix = activeMessages.slice(st.count, olderCount);
+    if (rawPrefix.length >= SUMMARY_BATCH) {
+      const newText = await runSummary(st.text, rawPrefix);
+      if (newText) { st = { count: olderCount, text: newText }; saveSummary(acId, st); rawPrefix = []; }
+      else rawPrefix = activeMessages.slice(0, olderCount);
+    }
+    summaryText = st.text;
+  }
+  if (summaryText) apiMessages.push({ role:'system', content:'【更早的对话摘要 · 仅供记忆参考，请勿逐字复述】\n' + summaryText });
+  for (const m of rawPrefix) apiMessages.push({ role:m.role, content:m.content });
+  for (const m of recent) apiMessages.push({ role:m.role, content:m.content });
+
+  // 摘要等待期间可能发生了停止或切换角色，此时不再继续发送
+  const stillAc = activeCharacter();
+  if (!isLoading || !stillAc || stillAc.id !== acId) return;
+
+  activeMessages.push({ role:'assistant', content:'', characterId:acId, ts:Date.now() });
   const aiIdx = activeMessages.length - 1;
 
   abortController = new AbortController();
@@ -80,7 +142,7 @@ async function generateResponse(systemSuffix) {
     const resp = await fetch(DEEPSEEK_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:MODEL, messages:apiMessages, stream:true, temperature:+(config.temperature||0.8), max_tokens:+(config.maxTokens||600) }),
+      body:JSON.stringify({ model:MODEL, messages:apiMessages, stream:true, temperature:+(config.temperature||1.0), max_tokens:+(config.maxTokens||1200), frequency_penalty:0.4 }),
       signal: abortController.signal
     });
     clearTimeout(timeoutId);
@@ -171,5 +233,11 @@ function yukiInitiative() {
     if (abortController) { abortController.abort(); abortController = null; }
     setLoading(false);
   }
-  generateResponse('现在你想主动找哥哥说话。只说你自己想说的话，不要替哥哥回复。像发微信一样发消息就好。');
+  const c = activeCharacter();
+  const title = config.userTitle || (c && c.userTitle) || '哥哥';
+  generateResponse(
+    '【注意】现在' + title + '没有说话，也没有发来任何新消息。你是在主动延续自己刚才正在做的事、正在说的话——接着上文继续你自己的动作、神态、心理和台词，就像你突然又想起什么、想主动开口一样。\n' +
+    '- 绝对不要虚构' + title + '说了什么，不要替' + title + '回复，也不要假装回应一条根本不存在的消息\n' +
+    '- 直接接着你自己的动作和话语写下去即可'
+  );
 }

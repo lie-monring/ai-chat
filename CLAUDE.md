@@ -22,6 +22,9 @@ Concatenates all `@include`d files from `src/` into `yuki-chat.html`. The `@incl
 
 ## Verify syntax after changes
 
+Extract JS from built HTML and syntax-check it:
+
+**PowerShell:**
 ```powershell
 node build.js
 $html = Get-Content yuki-chat.html -Raw -Encoding UTF8
@@ -30,6 +33,13 @@ $js = $js.Substring(0, $js.LastIndexOf('</script>'))
 $tmp = "$env:TEMP\_check.js"
 [System.IO.File]::WriteAllText($tmp, $js, [System.Text.Encoding]::UTF8)
 node --check $tmp
+```
+
+**Bash (Git Bash / WSL / macOS):**
+```bash
+node build.js
+sed -n '/<script>/,/<\/script>/p' yuki-chat.html | sed '1d;$d' > /tmp/_check.js
+node --check /tmp/_check.js
 ```
 
 ## Source structure
@@ -44,7 +54,7 @@ src/
 │   ├── 03-messages.css     # Message bubbles, markdown, typing, empty state
 │   └── 04-responsive.css   # Mobile @media queries
 └── js/
-    ├── 00-constants.js     # API URL, storage keys, persona prompts, PRESET_CHARACTERS, DEFAULT_SCENES
+    ├── 00-constants.js     # API URL, storage keys, persona prompts, PRESET_CHARACTERS, DEFAULT_SCENES, GLOBAL_WRITING_RULE
     ├── 01-utils.js         # deepClone, formatTime, estimateTokens, showToast, showError
     ├── 02-markdown.js      # renderMarkdown, copyCodeBlock
     ├── 03-storage.js       # localStorage CRUD, migration (v1→v2), saveCurrentMessages/Diary
@@ -68,7 +78,11 @@ JS files are plain concatenation (no ES modules). Order matters: each file assum
 
 **Characters** stored in `localStorage` under `yuki_chat_characters`. Each has: id, name, emoji, prompt (system prompt), description, userTitle (how AI addresses user), scenes (scene switching suffixes), samePersonGroup (for grouping variants of same person).
 
-**Preset characters** (`PRESET_CHARACTERS` array in `src/js/00-constants.js`) auto-added on first load if missing from localStorage. Currently: 澪 (Mio), 拉姆 (Ram), 蕾姆和拉姆 (Twins).
+**Preset characters** (`PRESET_CHARACTERS` array in `src/js/00-constants.js`) are auto-added on load by `ensurePresetCharacters()` if no existing character matches their `id`. Entries: 澪 (`c_mio`), 拉姆 (`c_ram`), 蕾姆 (`c_rem`), Yuki 常态 (`c_yuki_high`), 小Yuki 幼女态 (`c_yuki_kinder`), 蕾姆和拉姆 (`c_twins`), 火花 (`c_sparxie`). The two Yuki variants share `samePersonGroup: 'yuki'`; all others are `null`.
+
+**Yuki prompts** (`PERSONA_YUKI_HIGH_PROMPT`, `PERSONA_YUKI_KINDER_PROMPT`) back the two Yuki presets above and are also used directly by `migrateV1toV2()` and `createDefaultStart()` for legacy v1 data.
+
+**samePersonGroup** — characters sharing a `samePersonGroup` value (e.g. `'yuki'`) are treated as variants of the same person. The header shows a 🔄 badge to switch between them; switching preserves the current scene.
 
 **Conversations** stored per-character in `localStorage` under `yuki_chat_msgs_<charId>`. Messages have `{role, content, ts}`.
 
@@ -80,7 +94,7 @@ JS files are plain concatenation (no ES modules). Order matters: each file assum
 - `activeMessages[]` — current character's messages
 - `config` — settings object
 - `activeCharacter()` — returns currently selected character
-- `activeSystemPrompt()` — builds the full system prompt (persona + scene + userTitle replacement)
+- `activeSystemPrompt()` — builds the full system prompt: `prompt` + active `scene.suffix` + `userTitle` replacement + global `GLOBAL_WRITING_RULE` suffix (appended last, unconditionally)
 - `PRESET_CHARACTERS` — uses `deepClone(DEFAULT_SCENES)` in its initializer; both must be defined before it
 
 ## Adding a preset character
@@ -90,12 +104,25 @@ JS files are plain concatenation (no ES modules). Order matters: each file assum
 3. Include `userTitle` field (e.g. `'主人'`, `'弟弟'`)
 4. `node build.js` then `node --check` verify
 
+## Implementation details
+
+**SSE streaming + rAF throttling** (`src/js/13-api.js`): `generateResponse()` reads the SSE `ReadableStream` chunk-by-chunk, handling cross-chunk line breaks. DOM updates go through `updateLastBubble()` which uses `requestAnimationFrame` throttling — without this, every token arrival would trigger a forced reflow (layout thrashing). When modifying streaming, keep the rAF gate.
+
+**Character Card PNG import** (`src/js/07-characters.js`): Import supports both `.json` and `.png` files. PNGs are parsed for `tEXt` ancillary chunks containing Character Card v2/v3 JSON (base64-encoded). The parsed card data is mapped to the internal character schema.
+
+**Character `firstMessage`**: `firstMessage` is ONLY used as the empty-state hint text ("她说：…") in `12-messages.js` — it is NOT auto-inserted into the conversation. Don't rely on it to seed a message.
+
+**Vestigial character fields**: `activeSystemPrompt()` (the only prompt builder) uses just `prompt`, `scenes`+`activeScene`, `userTitle`, and the global `GLOBAL_WRITING_RULE`. Other fields are UI-only (`firstMessage` → empty-state hint, `stateDescription` → variant label) or import/export round-trip only (`cardData`, `cardVersion`, `tags`, `avatar`, `mesExample`, `postHistoryInstructions`). Notably `mesExample`/`postHistoryInstructions` are never read into the prompt — adding few-shot examples there has no effect; put them in `prompt` instead.
+
+**Dual timeout** (`generateResponse`): 30s `AbortController` per-request + 35s `setTimeout` global safety net. The safety timer catches cases where the abort signal itself hangs.
+
 ## Common pitfalls
 
 - Template literals in persona prompts: never put a raw backtick inside the prompt text
 - `PRESET_CHARACTERS` references `deepClone(DEFAULT_SCENES)` — `deepClone` is a `function` declaration (hoisted), but `DEFAULT_SCENES` and persona prompts are `const` (not hoisted), so they must appear before `PRESET_CHARACTERS` in `00-constants.js`
 - File opened via `file://` — localStorage works but some browsers have quirks
 - `window.copyCodeBlock` is set on the global `window` object for inline `onclick` handlers
+- Sampling defaults are duplicated and must be kept in sync: `temperature` (1.0) and `maxTokens` (1200) fallbacks appear in both `15-init.js` (slider display) and `13-api.js` (request body); `index.html` also carries the initial slider `value=`. `frequency_penalty: 0.4` is hardcoded only in `13-api.js`.
 
 ## Other files
 

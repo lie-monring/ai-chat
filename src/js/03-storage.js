@@ -33,9 +33,7 @@ function saveMessages(charId, msgs) {
   storageSet(STORAGE_KEY_MSGS_PFX + charId, trimmed);
   updateStorageInfo();
 }
-function loadDiary(charId) { return storageGet(STORAGE_KEY_DIARY_PFX + charId, []); }
-function saveDiary(charId, entries) { storageSet(STORAGE_KEY_DIARY_PFX + charId, entries); }
-function deleteCharData(charId) { storageRemove(STORAGE_KEY_MSGS_PFX + charId); storageRemove(STORAGE_KEY_DIARY_PFX + charId); }
+function deleteCharData(charId) { storageRemove(STORAGE_KEY_MSGS_PFX + charId); storageRemove(STORAGE_KEY_SUMMARY_PFX + charId); }
 
 function updateStorageInfo() {
   let total = 0;
@@ -66,7 +64,6 @@ function migrateV1toV2() {
     const oldPersona = localStorage.getItem(OLD_KEY_PERSONA) || 'sister-high';
     const oldScene = localStorage.getItem(OLD_KEY_SCENE) || '';
     const oldMessages = safeJsonParse(localStorage.getItem(OLD_KEY_HISTORY), []);
-    const oldDiary = safeJsonParse(localStorage.getItem(OLD_KEY_DIARY), []);
     const wasHigh = oldPersona === 'sister-high';
 
     const yukiHigh = { id:'c_yuki_high', name:'Yuki', emoji:'🌸', avatar:null, prompt:PERSONA_YUKI_HIGH_PROMPT, description:'亲昵黏人的妹妹', cardVersion:null, cardData:null, firstMessage:'', mesExample:'', postHistoryInstructions:'', scenes:deepClone(DEFAULT_SCENES), activeScene:oldScene, samePersonGroup:'yuki', stateDescription:'常态（亲昵黏人）', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
@@ -78,8 +75,6 @@ function migrateV1toV2() {
     saveCharacters([yukiHigh, yukiKinder]);
     saveMessages(activeId, taggedMsgs);
     saveMessages(wasHigh ? yukiKinder.id : yukiHigh.id, []);
-    saveDiary(activeId, oldDiary);
-    saveDiary(wasHigh ? yukiKinder.id : yukiHigh.id, []);
     return true;
   } catch { return false; }
 }
@@ -95,23 +90,32 @@ function createDefaultStart() {
   saveCharacters(chars);
   saveMessages(yukiHigh.id, []);
   saveMessages(yukiKinder.id, []);
-  saveDiary(yukiHigh.id, []);
-  saveDiary(yukiKinder.id, []);
 }
 
 function ensurePresetCharacters() {
   let added = false;
+  const reseed = (config.assetVersion || 0) < ASSET_VERSION;
   for (const preset of PRESET_CHARACTERS) {
-    if (!characters.find(c => c.id === preset.id)) {
+    const existing = characters.find(c => c.id === preset.id);
+    if (!existing) {
       const c = deepClone(preset);
       c.createdAt = new Date().toISOString();
       c.updatedAt = new Date().toISOString();
       characters.push(c);
       saveMessages(c.id, []);
-      saveDiary(c.id, []);
       added = true;
+    } else {
+      if (existing.themeColor === undefined && preset.themeColor) { existing.themeColor = preset.themeColor; added = true; }
+      if (reseed) {
+        if (preset.avatar != null) { existing.avatar = preset.avatar; added = true; }
+        if (preset.bgImage != null) { existing.bgImage = preset.bgImage; added = true; }
+      } else {
+        if (!existing.avatar && preset.avatar) { existing.avatar = preset.avatar; added = true; }
+        if (!existing.bgImage && preset.bgImage) { existing.bgImage = preset.bgImage; added = true; }
+      }
     }
   }
+  if (reseed) { config.assetVersion = ASSET_VERSION; saveConfig(config); }
   if (added) saveCharacters(characters);
   return added;
 }
@@ -120,4 +124,3 @@ function ensurePresetCharacters() {
 // SAVE HELPERS
 // ============================================================
 function saveCurrentMessages() { const ac=activeCharacter(); if(ac) saveMessages(ac.id, activeMessages); }
-function saveCurrentDiary() { const ac=activeCharacter(); if(ac) saveDiary(ac.id, activeDiary); }

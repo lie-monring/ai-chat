@@ -24,7 +24,8 @@ function renderCharItem(c, isGrouped) {
   item.className = 'char-item';
   item.dataset.charId = c.id;
   item.style.paddingLeft = isGrouped ? '22px' : '14px';
-  item.innerHTML = '<div class="c-avatar">' + escapeHtml(c.emoji || '💬') + '</div><div class="c-info"><div class="c-name">' + escapeHtml(c.name) + '</div><div class="c-desc">' + escapeHtml(c.stateDescription || c.description || '') + '</div></div>';
+  const avatarHtml = c.avatar ? '<img src="' + escapeHtml(c.avatar) + '" alt="">' : escapeHtml(c.emoji || '💬');
+  item.innerHTML = '<div class="c-avatar">' + avatarHtml + '</div><div class="c-info"><div class="c-name">' + escapeHtml(c.name) + '</div><div class="c-desc">' + escapeHtml(c.stateDescription || c.description || '') + '</div></div>';
   item.addEventListener('click', e => {
     if (isLoading) { showToast('正在生成回复，请稍候…'); return; }
     switchCharacter(c.id);

@@ -41,8 +41,6 @@
       </div>
       <div class="actions">
         <button id="btn-search" title="搜索消息">🔍</button>
-        <button id="btn-diary" title="日记本">📔</button>
-        <button id="btn-yuki-call" title="让Ta主动找你">💬</button>
         <button id="btn-theme" title="深色模式">🌙</button>
         <button id="btn-settings" title="设置">⚙</button>
       </div>
@@ -67,13 +65,41 @@
       <input type="text" id="user-title-input" placeholder="哥哥" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:var(--surface);color:var(--text)">
       <div class="hint">替换所有系统提示中角色的默认称呼</div>
       <div class="sep"></div>
+      <label>外观 · 当前角色：<span id="color-char-name" style="color:var(--primary)"></span></label>
       <div class="toggle-row">
-        <span>Temperature: <strong id="temp-display">0.8</strong></span>
-        <input type="range" id="temperature-slider" min="0.1" max="1.5" step="0.1" value="0.8" style="width:120px">
+        <span>主题色</span>
+        <input type="color" id="set-theme-color" value="#e8879a" style="width:44px;height:30px;padding:0;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer">
       </div>
       <div class="toggle-row">
-        <span>最大回复长度: <strong id="tokens-display">600</strong> tokens</span>
-        <input type="range" id="max-tokens-slider" min="100" max="2000" step="100" value="600" style="width:120px">
+        <span>背景色</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <input type="color" id="set-bg-color" value="#ffffff" style="width:44px;height:30px;padding:0;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer">
+          <label style="margin:0;font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="set-bg-custom" style="width:14px;height:14px">自定义</label>
+        </span>
+      </div>
+      <div class="toggle-row">
+        <span>背景图片</span>
+        <span style="display:flex;gap:6px">
+          <button id="btn-bg-image-pick" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer;color:var(--text)">选择图片</button>
+          <button id="btn-bg-image-clear" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer;color:var(--text);display:none">清除</button>
+        </span>
+      </div>
+      <div class="toggle-row">
+        <span>头像图片</span>
+        <span style="display:flex;gap:6px">
+          <button id="btn-avatar-image-pick" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer;color:var(--text)">选择图片</button>
+          <button id="btn-avatar-image-clear" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer;color:var(--text);display:none">清除</button>
+        </span>
+      </div>
+      <div class="hint">颜色、背景与头像图片只对当前选中的角色生效</div>
+      <div class="sep"></div>
+      <div class="toggle-row">
+        <span>Temperature: <strong id="temp-display">1.0</strong></span>
+        <input type="range" id="temperature-slider" min="0.1" max="1.5" step="0.1" value="1.0" style="width:120px">
+      </div>
+      <div class="toggle-row">
+        <span>最大回复长度: <strong id="tokens-display">1200</strong> tokens</span>
+        <input type="range" id="max-tokens-slider" min="100" max="2000" step="100" value="1200" style="width:120px">
       </div>
       <div class="toggle-row">
         <span>对话记忆: <strong id="history-display">40</strong> 条</span>
@@ -111,6 +137,7 @@
     </div>
 
     <div id="input-area">
+      <button id="btn-yuki-call" title="让Ta主动找你">💬</button>
       <textarea id="user-input" rows="1" placeholder="说点什么吧…"></textarea>
       <span class="input-meta" id="input-meta"></span>
       <span id="btn-send" tabindex="-1" role="button">➤</span>
@@ -121,17 +148,6 @@
 <div id="drawer-backdrop"></div>
 <div id="ctx-menu"></div>
 <div id="scene-transition"><div class="scene-label" id="scene-transition-label"></div></div>
-
-<div id="diary-overlay">
-  <div id="diary-header">
-    <span class="title" id="diary-title">📔 日记本</span>
-    <button id="btn-diary-close">✕</button>
-  </div>
-  <div id="diary-body"></div>
-  <div id="diary-footer">
-    <button id="btn-diary-write">✏️ 写一篇新日记</button>
-  </div>
-</div>
 
 <div class="modal-overlay" id="modal-char-edit">
   <div class="modal-box">
@@ -181,8 +197,11 @@
 
 <input type="file" id="file-import" accept=".json,.png" style="display:none">
 <input type="file" id="file-import-backup" accept=".json" style="display:none">
+<input type="file" id="file-bg-image" accept="image/*" style="display:none">
+<input type="file" id="file-avatar-image" accept="image/*" style="display:none">
 
 <script>
+<!-- @include js/00-assets.js -->
 <!-- @include js/00-constants.js -->
 <!-- @include js/01-utils.js -->
 <!-- @include js/02-markdown.js -->
@@ -193,7 +212,6 @@
 <!-- @include js/07-characters.js -->
 <!-- @include js/08-scenes.js -->
 <!-- @include js/09-search.js -->
-<!-- @include js/10-diary.js -->
 <!-- @include js/11-theme.js -->
 <!-- @include js/12-messages.js -->
 <!-- @include js/13-api.js -->

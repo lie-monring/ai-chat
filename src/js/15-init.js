@@ -15,14 +15,14 @@ function init() {
     config = loadConfig();
     characters = loadCharacters();
     const ac = activeCharacter();
-    if (ac) { activeMessages = loadMessages(ac.id); activeDiary = loadDiary(ac.id); }
+    if (ac) { activeMessages = loadMessages(ac.id); }
     showToast('已升级为多角色模式 🎉');
   } else {
     characters = loadCharacters();
     if (characters.length === 0) { createDefaultStart(); characters = loadCharacters(); config = loadConfig(); }
     const ac = activeCharacter();
-    if (ac) { activeMessages = loadMessages(ac.id); activeDiary = loadDiary(ac.id); }
-    else if (characters.length > 0) { config.activeCharId = characters[0].id; saveConfig(config); activeMessages = loadMessages(characters[0].id); activeDiary = loadDiary(characters[0].id); }
+    if (ac) { activeMessages = loadMessages(ac.id); }
+    else if (characters.length > 0) { config.activeCharId = characters[0].id; saveConfig(config); activeMessages = loadMessages(characters[0].id); }
   }
 
   const apiKey = config.apiKey || localStorage.getItem(OLD_KEY_KEY) || '';
@@ -34,13 +34,14 @@ function init() {
 
   $apiKeyInput.value = apiKey;
   $enterSendToggle.checked = enterSend;
-  $tempSlider.value = +(config.temperature||0.8); $tempDisplay.textContent = +(config.temperature||0.8);
-  $maxTokensSlider.value = +(config.maxTokens||600); $tokensDisplay.textContent = +(config.maxTokens||600);
+  $tempSlider.value = +(config.temperature||1.0); $tempDisplay.textContent = +(config.temperature||1.0);
+  $maxTokensSlider.value = +(config.maxTokens||1200); $tokensDisplay.textContent = +(config.maxTokens||1200);
   $maxHistorySlider.value = +(config.maxHistory||MAX_HISTORY); $historyDisplay.textContent = +(config.maxHistory||MAX_HISTORY);
   $userTitleInput.value = config.userTitle || '';
   applyTheme();
   if (ensurePresetCharacters()) showToast('新的预设角色已加入 🎉');
   renderSidebar(); updateUI(); renderMessages(); updateCharCount(); updateStorageInfo();
+  syncColorSettings();
 
   // ---- Event Listeners ----
   $btnAddChar.addEventListener('click', openAddCharacter);
@@ -50,10 +51,17 @@ function init() {
   $drawerBackdrop.addEventListener('click', closeSidebar);
   document.addEventListener('click', e => { if (!$ctxMenu.contains(e.target)) closeCtxMenu(); });
 
-  $btnSettings.addEventListener('click', () => $settingsPanel.classList.toggle('open'));
+  $btnSettings.addEventListener('click', () => {
+    $settingsPanel.classList.toggle('open');
+    if ($settingsPanel.classList.contains('open')) syncColorSettings();
+  });
   $btnSaveKey.addEventListener('click', saveSettings);
   $btnClearChat.addEventListener('click', () => {
-    if (confirm('确定要清空当前角色的聊天记录吗？')) { activeMessages = []; saveCurrentMessages(); renderMessages(); }
+    if (confirm('确定要清空当前角色的聊天记录吗？')) {
+      activeMessages = [];
+      const ac = activeCharacter(); if (ac) storageRemove(STORAGE_KEY_SUMMARY_PFX + ac.id);
+      saveCurrentMessages(); renderMessages();
+    }
   });
   $btnExportAll.addEventListener('click', exportAllData);
   $btnImportAll.addEventListener('click', () => $fileImportBackup.click());
@@ -73,10 +81,45 @@ function init() {
   $maxTokensSlider.addEventListener('input', () => { config.maxTokens = $maxTokensSlider.value; $tokensDisplay.textContent = $maxTokensSlider.value; saveConfig(config); });
   $maxHistorySlider.addEventListener('input', () => { config.maxHistory = $maxHistorySlider.value; $historyDisplay.textContent = $maxHistorySlider.value; saveConfig(config); });
   $userTitleInput.addEventListener('input', () => { config.userTitle = $userTitleInput.value.trim(); saveConfig(config); });
-  $btnDiary.addEventListener('click', openDiary);
-  $btnDiaryClose.addEventListener('click', () => $diaryOverlay.classList.remove('show'));
-  $btnDiaryWrite.addEventListener('click', writeDiary);
-  $diaryOverlay.addEventListener('click', e => { if (e.target === $diaryOverlay) $diaryOverlay.classList.remove('show'); });
+  $setThemeColor.addEventListener('input', () => {
+    const ac = activeCharacter(); if (!ac) return;
+    ac.themeColor = $setThemeColor.value; saveCharacters(characters); applyThemeColor();
+  });
+  $setBgColor.addEventListener('input', () => {
+    const ac = activeCharacter(); if (!ac) return;
+    if ($setBgCustom.checked) { ac.bgColor = $setBgColor.value; saveCharacters(characters); applyThemeColor(); }
+  });
+  $setBgCustom.addEventListener('change', () => {
+    const ac = activeCharacter(); if (!ac) return;
+    ac.bgColor = $setBgCustom.checked ? ($setBgColor.value || null) : null;
+    saveCharacters(characters); applyThemeColor();
+  });
+  $btnBgImagePick.addEventListener('click', () => $fileBgImage.click());
+  $btnBgImageClear.addEventListener('click', () => {
+    const ac = activeCharacter(); if (!ac) return;
+    ac.bgImage = null; saveCharacters(characters); applyThemeColor(); syncColorSettings();
+  });
+  $fileBgImage.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return; e.target.value = '';
+    const ac = activeCharacter(); if (!ac) return;
+    fileToDataImage(file, 1280, 'image/jpeg', url => {
+      if (!url) { showToast('图片读取失败'); return; }
+      ac.bgImage = url; saveCharacters(characters); applyThemeColor(); syncColorSettings(); showToast('背景图片已设置');
+    });
+  });
+  $btnAvatarImagePick.addEventListener('click', () => $fileAvatarImage.click());
+  $btnAvatarImageClear.addEventListener('click', () => {
+    const ac = activeCharacter(); if (!ac) return;
+    ac.avatar = null; saveCharacters(characters); updateUI(); renderSidebar(); syncColorSettings();
+  });
+  $fileAvatarImage.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return; e.target.value = '';
+    const ac = activeCharacter(); if (!ac) return;
+    fileToDataImage(file, 256, 'image/png', url => {
+      if (!url) { showToast('头像读取失败'); return; }
+      ac.avatar = url; saveCharacters(characters); updateUI(); renderSidebar(); syncColorSettings(); showToast('头像已更新');
+    });
+  });
   $samePersonBadge.addEventListener('click', switchToSamePerson);
 
   // Search listeners

@@ -37,6 +37,7 @@
   width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#f8bbd0,#e8879a);
   display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
 }
+.char-item .c-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
 .char-item .c-info { flex:1; min-width:0 }
 .char-item .c-name { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .char-item .c-desc { font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
@@ -66,6 +67,7 @@
 }
 #btn-sidebar-toggle { display:none; width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;align-items:center;justify-content:center;color:var(--text-secondary);flex-shrink:0 }
 #header .avatar { width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f8bbd0,#e8879a);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0 }
+#header .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
 #header .info{flex:1;min-width:0}
 #header .name{font-size:15px;font-weight:600}
 #header .status{font-size:11px;color:var(--text-secondary)}
