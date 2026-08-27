@@ -61,9 +61,9 @@
       <input type="password" id="api-key-input" placeholder="sk-...">
       <div class="hint">Key 仅保存在本设备浏览器中</div>
       <div class="sep"></div>
-      <label>AI 怎么称呼你</label>
-      <input type="text" id="user-title-input" placeholder="哥哥" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:var(--surface);color:var(--text)">
-      <div class="hint">替换所有系统提示中角色的默认称呼</div>
+      <label>AI 怎么称呼你（当前角色）</label>
+      <input type="text" id="char-title-input" placeholder="留空用默认" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:var(--surface);color:var(--text)">
+      <div class="hint">只对当前选中的角色生效</div>
       <div class="sep"></div>
       <label>外观 · 当前角色：<span id="color-char-name" style="color:var(--primary)"></span></label>
       <div class="toggle-row">
@@ -159,6 +159,9 @@
     <div class="emoji-grid" id="emoji-grid"></div>
     <label>简短描述（显示在侧栏）</label>
     <input type="text" id="char-edit-desc" placeholder="哥哥的远房表妹">
+    <label>AI 怎么称呼你</label>
+    <input type="text" id="char-edit-title" placeholder="例如：主人 / 哥哥 / 同学">
+    <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">她该怎么称呼你（留空则用角色默认称呼）</div>
     <label>System Prompt（人设）</label>
     <textarea id="char-edit-prompt" placeholder="你是...&#10;【身份】...&#10;【性格】...&#10;【说话风格】..."></textarea>
     <div class="modal-btns">

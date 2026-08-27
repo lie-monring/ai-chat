@@ -54,6 +54,7 @@ function syncColorSettings() {
   $btnBgImageClear.style.display = ac.bgImage ? '' : 'none';
   $btnAvatarImageClear.style.display = ac.avatar ? '' : 'none';
   $colorCharName.textContent = ac.name;
+  $charTitleInput.value = ac.userTitle || '';
 }
 
 function fileToDataImage(file, max, type, cb) {

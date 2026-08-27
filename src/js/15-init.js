@@ -1,7 +1,7 @@
 // ============================================================
 // INIT
 // ============================================================
-function init() {
+async function init() {
   EMOJI_PALETTE.forEach(e => {
     const span = document.createElement('span');
     span.textContent = e;
@@ -9,6 +9,7 @@ function init() {
     $emojiGrid.appendChild(span);
   });
 
+  await initStorage();
   config = loadConfig();
   if (!config.version || config.version < CONFIG_VERSION) {
     migrateV1toV2();
@@ -37,9 +38,9 @@ function init() {
   $tempSlider.value = +(config.temperature||1.0); $tempDisplay.textContent = +(config.temperature||1.0);
   $maxTokensSlider.value = +(config.maxTokens||1200); $tokensDisplay.textContent = +(config.maxTokens||1200);
   $maxHistorySlider.value = +(config.maxHistory||MAX_HISTORY); $historyDisplay.textContent = +(config.maxHistory||MAX_HISTORY);
-  $userTitleInput.value = config.userTitle || '';
   applyTheme();
   if (ensurePresetCharacters()) showToast('新的预设角色已加入 🎉');
+  for (const c of characters) { if (c.defaultTitle === undefined) c.defaultTitle = c.userTitle || '哥哥'; }
   renderSidebar(); updateUI(); renderMessages(); updateCharCount(); updateStorageInfo();
   syncColorSettings();
 
@@ -80,7 +81,7 @@ function init() {
   $tempSlider.addEventListener('input', () => { config.temperature = $tempSlider.value; $tempDisplay.textContent = $tempSlider.value; saveConfig(config); });
   $maxTokensSlider.addEventListener('input', () => { config.maxTokens = $maxTokensSlider.value; $tokensDisplay.textContent = $maxTokensSlider.value; saveConfig(config); });
   $maxHistorySlider.addEventListener('input', () => { config.maxHistory = $maxHistorySlider.value; $historyDisplay.textContent = $maxHistorySlider.value; saveConfig(config); });
-  $userTitleInput.addEventListener('input', () => { config.userTitle = $userTitleInput.value.trim(); saveConfig(config); });
+  $charTitleInput.addEventListener('input', () => { const ac = activeCharacter(); if (!ac) return; ac.userTitle = $charTitleInput.value.trim(); saveCharacters(characters); });
   $setThemeColor.addEventListener('input', () => {
     const ac = activeCharacter(); if (!ac) return;
     ac.themeColor = $setThemeColor.value; saveCharacters(characters); applyThemeColor();

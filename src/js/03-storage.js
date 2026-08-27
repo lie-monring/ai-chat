@@ -1,20 +1,84 @@
 // ============================================================
-// STORAGE LAYER (with error boundaries)
+// STORAGE LAYER (IndexedDB-backed, with sync in-memory cache)
 // ============================================================
-function storageGet(key, fallback) {
-  try { const r = localStorage.getItem(key); return r ? safeJsonParse(r, fallback) : fallback; }
-  catch { return fallback; }
+const _kv = new Map();
+let _idb = null;
+
+function _openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('yuki_chat', 1);
+    req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains('kv')) req.result.createObjectStore('kv'); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
-function storageSet(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
-  catch (e) {
-    if (e.name === 'QuotaExceededError') {
-      showError('存储空间已满！请清理旧对话或导出备份后清空数据。', true);
+function _dbReq(req) { return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+function _txDone(tx) { return new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); }); }
+function _idbPut(key, val) { if (!_idb) return; try { _idb.transaction('kv', 'readwrite').objectStore('kv').put(val, key); } catch {} }
+function _idbDelete(key) { if (!_idb) return; try { _idb.transaction('kv', 'readwrite').objectStore('kv').delete(key); } catch {} }
+function _flushAll() {
+  if (!_idb) return;
+  try {
+    const tx = _idb.transaction('kv', 'readwrite');
+    const s = tx.objectStore('kv');
+    for (const [k, v] of _kv) s.put(v, k);
+  } catch {}
+}
+window.addEventListener('pagehide', _flushAll);
+window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _flushAll(); });
+
+async function initStorage() {
+  try {
+    _idb = await _openDb();
+    if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch {} }
+    const store = _idb.transaction('kv', 'readonly').objectStore('kv');
+    const keysReq = store.getAllKeys();
+    const valsReq = store.getAll();
+    const keys = await _dbReq(keysReq);
+    if (!keys || keys.length === 0) {
+      // 一次性迁移：把 localStorage 里的数据复制进 IndexedDB（不清除 localStorage）
+      const migrated = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('yuki_')) {
+          try { const raw = localStorage.getItem(k); _kv.set(k, safeJsonParse(raw, raw)); migrated.push(k); } catch {}
+        }
+      }
+      if (migrated.length > 0) {
+        const tx = _idb.transaction('kv', 'readwrite');
+        const s = tx.objectStore('kv');
+        for (const k of migrated) s.put(_kv.get(k), k);
+        await _txDone(tx);
+      }
+    } else {
+      const vals = await _dbReq(valsReq);
+      keys.forEach((k, i) => _kv.set(k, vals[i]));
     }
-    return false;
+  } catch {
+    // IndexedDB 不可用（如隐私模式）——回退到 localStorage
+    _idb = null;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('yuki_')) { try { const raw = localStorage.getItem(k); _kv.set(k, safeJsonParse(raw, raw)); } catch {} }
+    }
   }
 }
-function storageRemove(key) { try { localStorage.removeItem(key); } catch {} }
+
+function storageGet(key, fallback) {
+  const v = _kv.get(key);
+  return v === undefined ? fallback : v;
+}
+function storageSet(key, val) {
+  _kv.set(key, val);
+  if (_idb) { _idbPut(key, val); return true; }
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch (e) { if (e.name === 'QuotaExceededError') { showError('存储空间已满！请清理旧对话或导出备份后清空数据。', true); } return false; }
+}
+function storageRemove(key) {
+  _kv.delete(key);
+  if (_idb) _idbDelete(key);
+  else { try { localStorage.removeItem(key); } catch {} }
+}
 
 function loadConfig() { return storageGet(STORAGE_KEY_CONFIG, {}); }
 function saveConfig(cfg) { storageSet(STORAGE_KEY_CONFIG, cfg); }
@@ -35,18 +99,23 @@ function saveMessages(charId, msgs) {
 }
 function deleteCharData(charId) { storageRemove(STORAGE_KEY_MSGS_PFX + charId); storageRemove(STORAGE_KEY_SUMMARY_PFX + charId); }
 
-function updateStorageInfo() {
-  let total = 0;
+async function updateStorageInfo() {
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('yuki_')) total += (localStorage.getItem(k) || '').length;
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      const usedKB = (est.usage / 1024).toFixed(0);
+      const quotaMB = (est.quota / 1048576).toFixed(0);
+      const pct = est.quota ? Math.min(100, (est.usage / est.quota) * 100).toFixed(0) : '0';
+      $storageInfo.textContent = '已使用: ~' + usedKB + ' KB / ' + quotaMB + ' MB (' + pct + '%)';
+      $storageFill.style.width = pct + '%';
+    } else {
+      $storageInfo.textContent = '已使用: IndexedDB（配额远超 localStorage）';
+      $storageFill.style.width = '0%';
     }
-  } catch {}
-  const usedKB = (total / 1024).toFixed(0);
-  const pct = Math.min(100, (total / (5 * 1024 * 1024)) * 100).toFixed(0);
-  $storageInfo.textContent = '已使用: ~' + usedKB + ' KB / 5 MB (' + pct + '%)';
-  $storageFill.style.width = pct + '%';
+  } catch {
+    $storageInfo.textContent = '已使用: IndexedDB（配额远超 localStorage）';
+    $storageFill.style.width = '0%';
+  }
 }
 function updateCharCount() {
   $charCount.textContent = characters.length + '/' + MAX_CHARACTERS;
@@ -105,6 +174,8 @@ function ensurePresetCharacters() {
       saveMessages(c.id, []);
       added = true;
     } else {
+      if (existing.userTitle === undefined && preset.userTitle) { existing.userTitle = preset.userTitle; added = true; }
+      if (existing.description !== preset.description) { existing.description = preset.description; added = true; }
       if (existing.themeColor === undefined && preset.themeColor) { existing.themeColor = preset.themeColor; added = true; }
       if (reseed) {
         if (preset.avatar != null) { existing.avatar = preset.avatar; added = true; }

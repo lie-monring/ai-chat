@@ -234,7 +234,7 @@ function yukiInitiative() {
     setLoading(false);
   }
   const c = activeCharacter();
-  const title = config.userTitle || (c && c.userTitle) || '哥哥';
+  const title = effectiveTitle(c);
   generateResponse(
     '【注意】现在' + title + '没有说话，也没有发来任何新消息。你是在主动延续自己刚才正在做的事、正在说的话——接着上文继续你自己的动作、神态、心理和台词，就像你突然又想起什么、想主动开口一样。\n' +
     '- 绝对不要虚构' + title + '说了什么，不要替' + title + '回复，也不要假装回应一条根本不存在的消息\n' +

@@ -31,14 +31,14 @@ function openAddCharacter() {
   if (characters.length >= MAX_CHARACTERS) { showToast('最多支持 ' + MAX_CHARACTERS + ' 个角色'); return; }
   editingCharId = 'new';
   $modalCharTitle.textContent = '添加角色';
-  $charEditName.value = ''; $charEditEmoji.value = '🌸'; $charEditDesc.value = ''; $charEditPrompt.value = '';
+  $charEditName.value = ''; $charEditEmoji.value = '🌸'; $charEditDesc.value = ''; $charEditPrompt.value = ''; $charEditTitle.value = '';
   renderEmojiGrid(); $modalCharEdit.classList.add('show'); $charEditName.focus();
 }
 function openEditCharacter(charId) {
   const c = characters.find(ch => ch.id === charId); if (!c) return;
   editingCharId = charId;
   $modalCharTitle.textContent = '编辑角色';
-  $charEditName.value = c.name; $charEditEmoji.value = c.emoji || '🌸'; $charEditDesc.value = c.description || ''; $charEditPrompt.value = c.prompt || '';
+  $charEditName.value = c.name; $charEditEmoji.value = c.emoji || '🌸'; $charEditDesc.value = c.description || ''; $charEditPrompt.value = c.prompt || ''; $charEditTitle.value = c.userTitle || '';
   renderEmojiGrid(); $modalCharEdit.classList.add('show'); $charEditName.focus();
 }
 function saveCharEdit() {
@@ -46,13 +46,14 @@ function saveCharEdit() {
   const emoji = $charEditEmoji.value.trim() || '💬';
   const description = $charEditDesc.value.trim();
   const prompt = $charEditPrompt.value.trim(); if (!prompt) { showToast('请输入角色人设 prompt'); return; }
+  const title = $charEditTitle.value.trim();
   if (editingCharId === 'new') {
-    const c = { id:generateId(), name, emoji, avatar:null, prompt, description, themeColor:THEME_COLOR_PALETTE[characters.length % THEME_COLOR_PALETTE.length], bgColor:null, bgImage:null, cardVersion:null, cardData:null, firstMessage:'', mesExample:'', postHistoryInstructions:'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
+    const c = { id:generateId(), name, emoji, avatar:null, prompt, description, userTitle: title, defaultTitle: '哥哥', themeColor:THEME_COLOR_PALETTE[characters.length % THEME_COLOR_PALETTE.length], bgColor:null, bgImage:null, cardVersion:null, cardData:null, firstMessage:'', mesExample:'', postHistoryInstructions:'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
     characters.push(c); saveCharacters(characters); saveMessages(c.id, []);
     renderSidebar(); switchCharacter(c.id); showToast('角色「' + name + '」已添加');
   } else {
     const idx = characters.findIndex(ch => ch.id === editingCharId); if (idx < 0) return;
-    characters[idx].name = name; characters[idx].emoji = emoji; characters[idx].description = description; characters[idx].prompt = prompt; characters[idx].updatedAt = new Date().toISOString();
+    characters[idx].name = name; characters[idx].emoji = emoji; characters[idx].description = description; characters[idx].prompt = prompt; characters[idx].userTitle = title; if (characters[idx].defaultTitle === undefined) characters[idx].defaultTitle = title || '哥哥'; characters[idx].updatedAt = new Date().toISOString();
     saveCharacters(characters); renderSidebar(); updateUI(); showToast('角色「' + name + '」已更新');
   }
   $modalCharEdit.classList.remove('show'); editingCharId = null;
@@ -131,7 +132,7 @@ function mapCardToCharacter(card) {
   if (data.system_prompt) pp.push(data.system_prompt);
   else { if(data.name)pp.push('【角色名】'+data.name); if(data.description)pp.push('【描述】'+data.description); if(data.personality)pp.push('【性格】'+data.personality); if(data.scenario)pp.push('【背景】'+data.scenario); }
   if (data.post_history_instructions) pp.push(data.post_history_instructions);
-  return { id:generateId(), name:data.name||'未命名角色', emoji:EMOJI_PALETTE[characters.length%EMOJI_PALETTE.length]||'💬', avatar:data.avatar||null, themeColor:THEME_COLOR_PALETTE[characters.length%THEME_COLOR_PALETTE.length]||null, bgColor:null, bgImage:null, prompt:pp.join('\n\n')||JSON.stringify(card), description:(typeof data.description==='string'?data.description:(data.name||'')), tags:data.tags||[], cardVersion:version, cardData:card, firstMessage:data.first_mes||'', mesExample:data.mes_example||'', postHistoryInstructions:data.post_history_instructions||'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
+  return { id:generateId(), name:data.name||'未命名角色', emoji:EMOJI_PALETTE[characters.length%EMOJI_PALETTE.length]||'💬', avatar:data.avatar||null, themeColor:THEME_COLOR_PALETTE[characters.length%THEME_COLOR_PALETTE.length]||null, bgColor:null, bgImage:null, prompt:pp.join('\n\n')||JSON.stringify(card), description:(typeof data.description==='string'?data.description:(data.name||'')), userTitle: data.user_title||'', defaultTitle: data.user_title||'哥哥', tags:data.tags||[], cardVersion:version, cardData:card, firstMessage:data.first_mes||'', mesExample:data.mes_example||'', postHistoryInstructions:data.post_history_instructions||'', scenes:deepClone(DEFAULT_SCENES), activeScene:'', samePersonGroup:null, stateDescription:null, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), messageCount:0 };
 }
 function showImportConfirm(c) {
   if (characters.length >= MAX_CHARACTERS) { showToast('最多支持 ' + MAX_CHARACTERS + ' 个角色'); return; }
